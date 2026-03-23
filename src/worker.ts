@@ -24,7 +24,7 @@ function makeWorker(
 ) {
   const worker = new Worker<MediaJobData, JobResult>(queueName, processor, {
     connection: makeConnection(),
-    concurrency: queueName === VIDEO_QUEUE ? 2 : 4, // video is heavier
+    concurrency: queueName === VIDEO_QUEUE ? 2 : 4,
     limiter: { max: 20, duration: 1000 },
   })
 
@@ -58,7 +58,6 @@ function makeWorker(
 const imageWorker = makeWorker(IMAGE_QUEUE, processImage)
 const videoWorker = makeWorker(VIDEO_QUEUE, processVideo)
 
-// Graceful shutdown
 async function shutdown() {
   console.log("Shutting down workers...")
   await Promise.all([imageWorker.close(), videoWorker.close()])

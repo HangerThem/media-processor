@@ -45,7 +45,6 @@ export async function processVideo(job: Job<MediaJobData>): Promise<JobResult> {
   try {
     await job.updateProgress(5)
 
-    // 1. Download original — stream to disk (avoids OOM on large videos)
     const { data: fileData, error: downloadError } = await supabase.storage
       .from(bucket)
       .download(path)
@@ -56,11 +55,9 @@ export async function processVideo(job: Job<MediaJobData>): Promise<JobResult> {
 
     await job.updateProgress(30)
 
-    // 2. Probe video metadata
     const meta = await ffprobe(inputPath)
-    const thumbAt = Math.min(1, meta.duration * 0.1).toFixed(2) // 10% in or 1s
+    const thumbAt = Math.min(1, meta.duration * 0.1).toFixed(2)
 
-    // 3. Generate thumbnail (single frame, WebP)
     await execFileAsync("ffmpeg", [
       "-ss",
       thumbAt,
@@ -76,8 +73,7 @@ export async function processVideo(job: Job<MediaJobData>): Promise<JobResult> {
 
     await job.updateProgress(55)
 
-    // 4. Generate preview clip (first 15s, 720p max, no audio, h264)
-    const previewDuration = Math.min(15, meta.duration)
+    const previewDuration = Math.min(5, meta.duration)
     await execFileAsync("ffmpeg", [
       "-i",
       inputPath,
@@ -100,7 +96,6 @@ export async function processVideo(job: Job<MediaJobData>): Promise<JobResult> {
 
     await job.updateProgress(75)
 
-    // 5. Read output files
     const [thumbData, previewData] = await Promise.all([
       readFile(thumbPath),
       readFile(previewPath),
@@ -108,7 +103,6 @@ export async function processVideo(job: Job<MediaJobData>): Promise<JobResult> {
 
     const previewStat = await stat(previewPath)
 
-    // 6. Upload derivatives
     const storedThumbPath = `derivatives/${fileId}/thumbnail.webp`
     const storedPreviewPath = `derivatives/${fileId}/preview.mp4`
 
@@ -130,7 +124,6 @@ export async function processVideo(job: Job<MediaJobData>): Promise<JobResult> {
 
     await job.updateProgress(90)
 
-    // 7. Insert derivative records
     const res = await prisma.fileDerivative.createMany({
       data: [
         {
@@ -164,7 +157,6 @@ export async function processVideo(job: Job<MediaJobData>): Promise<JobResult> {
       processingMs: Date.now() - start,
     }
   } finally {
-    // Always clean up regardless of success/failure
     await rm(tmpDir, { recursive: true, force: true })
   }
 }

@@ -43,6 +43,11 @@ export async function processVideo(job: Job<MediaJobData>): Promise<JobResult> {
   const previewPath = join(tmpDir, "preview.mp4")
 
   try {
+    await prisma.file.update({
+      where: { id: fileId },
+      data: { status: "processing" },
+    })
+
     await job.updateProgress(5)
 
     const { data: fileData, error: downloadError } = await supabase.storage
@@ -149,6 +154,11 @@ export async function processVideo(job: Job<MediaJobData>): Promise<JobResult> {
 
     if (res.count !== 2) throw new Error("Failed to record derivatives in DB")
 
+    await prisma.file.update({
+      where: { id: fileId },
+      data: { status: "completed" },
+    })
+
     await job.updateProgress(100)
 
     return {
@@ -156,6 +166,13 @@ export async function processVideo(job: Job<MediaJobData>): Promise<JobResult> {
       derivatives: [storedThumbPath, storedPreviewPath],
       processingMs: Date.now() - start,
     }
+  } catch (err) {
+    await prisma.file.update({
+      where: { id: fileId },
+      data: { status: "failed" },
+    })
+
+    throw err
   } finally {
     await rm(tmpDir, { recursive: true, force: true })
   }

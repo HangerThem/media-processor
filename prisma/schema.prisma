@@ -239,7 +239,6 @@ model FileDerivative {
   width       Int?
   height      Int?
   duration    Int?
-  status      FileStatus     @default(pending)
   createdAt   DateTime       @default(now()) @map("created_at")
   updatedAt   DateTime       @updatedAt @map("updated_at")
   sourceId    String         @map("source_id")
@@ -448,16 +447,13 @@ enum FileType {
 enum FileStatus {
   pending
   processing
-  done
+  completed
   failed
 }
 
 enum DerivativeType {
   thumbnail
   preview
-  hd
-  compressed
-  gif_preview
 }
 
 enum PhotoshootTime {

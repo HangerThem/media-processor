@@ -33,7 +33,6 @@ app.use(express.json())
 app.use("/jobs", jobsRouter)
 app.use("/dashboard", dashboardRouter)
 
-// Health check
 app.get("/health", (_req, res) => {
   res.json({ ok: true, ts: Date.now() })
 })

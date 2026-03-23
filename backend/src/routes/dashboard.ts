@@ -4,8 +4,6 @@ import { makeQueue, IMAGE_QUEUE, VIDEO_QUEUE } from "../lib/queues"
 
 const router = Router()
 
-// Dashboard routes are protected by a separate dashboard secret
-// so they can be read by the dashboard without sharing the enqueue secret
 function dashAuth(req: Request, res: Response, next: () => void) {
   const token = req.headers["x-dashboard-secret"] as string | undefined
   const validTokens = [

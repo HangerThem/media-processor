@@ -11,7 +11,6 @@ export async function processImage(job: Job<MediaJobData>): Promise<JobResult> {
 
   await job.updateProgress(10)
 
-  // 1. Download original
   const { data: fileData, error: downloadError } = await supabase.storage
     .from(bucket)
     .download(path)
@@ -23,7 +22,6 @@ export async function processImage(job: Job<MediaJobData>): Promise<JobResult> {
 
   await job.updateProgress(30)
 
-  // 2. Generate preview (max 1200px wide, WebP)
   const previewBuffer = await sharp(buffer)
     .resize({ width: 1200, withoutEnlargement: true })
     .webp({ quality: 85 })
@@ -31,7 +29,6 @@ export async function processImage(job: Job<MediaJobData>): Promise<JobResult> {
 
   await job.updateProgress(55)
 
-  // 3. Generate thumbnail (200x200 cover crop)
   const thumbBuffer = await sharp(buffer)
     .resize({ width: 200, height: 200, fit: "cover", position: "attention" })
     .webp({ quality: 75 })
@@ -39,7 +36,6 @@ export async function processImage(job: Job<MediaJobData>): Promise<JobResult> {
 
   await job.updateProgress(70)
 
-  // 4. Upload derivatives
   const previewPath = `derivatives/${fileId}/preview.webp`
   const thumbPath = `derivatives/${fileId}/thumbnail.webp`
 
@@ -61,7 +57,6 @@ export async function processImage(job: Job<MediaJobData>): Promise<JobResult> {
 
   await job.updateProgress(88)
 
-  // 5. Record derivatives in DB
   const res = await prisma.fileDerivative.createMany({
     data: [
       {

@@ -1,24 +1,8 @@
-import { PrismaClient, Prisma } from "@prisma/client"
+import { PrismaClient } from "@prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
 
 function getDatabaseUrl() {
   return process.env.DATABASE_URL
-}
-
-function getSafeDatabaseInfo(connectionString: string) {
-  try {
-    const url = new URL(connectionString)
-    return {
-      protocol: url.protocol,
-      host: url.hostname,
-      port: url.port || undefined,
-      database: url.pathname.replace(/^\//, ""),
-      user: decodeURIComponent(url.username || ""),
-      params: Object.fromEntries(url.searchParams.entries()),
-    }
-  } catch {
-    return { unparseable: true }
-  }
 }
 
 const createPrismaClient = () => {

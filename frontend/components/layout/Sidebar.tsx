@@ -144,11 +144,16 @@ export function Sidebar({
   navCounts,
   isConnected,
 }: SidebarProps) {
-  const sections = [
+  const sections: { label: string; items: NavItem[] }[] = [
     {
       label: "Overview",
       items: [
-        { id: "overview" as ViewId, label: "Overview", icon: <OverviewIcon /> },
+        {
+          id: "overview" as ViewId,
+          label: "Overview",
+          icon: <OverviewIcon />,
+          badge: undefined,
+        },
       ],
     },
     {

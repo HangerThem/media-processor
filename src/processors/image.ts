@@ -10,11 +10,6 @@ export async function processImage(job: Job<MediaJobData>): Promise<JobResult> {
     const { fileId, bucket, path } = job.data
     const supabase = getSupabase()
 
-    await prisma.file.update({
-      where: { id: fileId },
-      data: { status: "processing" },
-    })
-
     await job.updateProgress(10)
 
     const { data: fileData, error: downloadError } = await supabase.storage
@@ -25,6 +20,17 @@ export async function processImage(job: Job<MediaJobData>): Promise<JobResult> {
 
     const buffer = Buffer.from(await fileData.arrayBuffer())
     const meta = await sharp(buffer).metadata()
+
+    await job.updateProgress(20)
+
+    await prisma.file.update({
+      where: { id: fileId },
+      data: {
+        status: "processing",
+        width: meta.width,
+        height: meta.height,
+      },
+    })
 
     await job.updateProgress(30)
 

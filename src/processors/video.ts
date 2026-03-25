@@ -43,11 +43,6 @@ export async function processVideo(job: Job<MediaJobData>): Promise<JobResult> {
   const previewPath = join(tmpDir, "preview.mp4")
 
   try {
-    await prisma.file.update({
-      where: { id: fileId },
-      data: { status: "processing" },
-    })
-
     await job.updateProgress(5)
 
     const { data: fileData, error: downloadError } = await supabase.storage
@@ -58,9 +53,22 @@ export async function processVideo(job: Job<MediaJobData>): Promise<JobResult> {
 
     await writeFile(inputPath, Buffer.from(await fileData.arrayBuffer()))
 
-    await job.updateProgress(30)
+    await job.updateProgress(20)
 
     const meta = await ffprobe(inputPath)
+
+    await prisma.file.update({
+      where: { id: fileId },
+      data: {
+        status: "processing",
+        width: meta.width,
+        height: meta.height,
+        duration: meta.duration,
+      },
+    })
+
+    await job.updateProgress(30)
+
     const thumbAt = Math.min(1, meta.duration * 0.1).toFixed(2)
 
     await execFileAsync("ffmpeg", [

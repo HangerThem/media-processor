@@ -14,14 +14,15 @@ model User {
   authUserId       String                       @unique @map("auth_user_id")
   createdAt        DateTime                     @default(now()) @map("created_at")
   updatedAt        DateTime                     @updatedAt @map("updated_at")
+  bookmarks        bookmarks[]
   lastSeenMessages LastSeenMessageInGroupChat[]
   seenComments     CommentSeenByUser[]
   comments         Comment[]
   companyContact   CompanyContact?
   uploadedFiles    File[]                       @relation("FileUploader")
+  managers         managers?
   sentMessages     Message[]
   notes            Note[]
-  staff            Staff?
 
   @@map("users")
 }
@@ -42,17 +43,17 @@ model Company {
   warning             Boolean            @default(false)
   avatar              File?              @relation("CompanyAvatar", fields: [avatarId], references: [id])
   businessAssociate   BusinessAssociate? @relation(fields: [businessAssociateId], references: [id])
-  groupChat           GroupChat          @relation(fields: [groupChatId], references: [id])
+  groupChat           GroupChat          @relation(fields: [groupChatId], references: [id], onDelete: Cascade)
   photographer        Photographer?      @relation(fields: [photographerId], references: [id])
   subscriptionPlan    SubscriptionPlan?  @relation(fields: [subscriptionPlanId], references: [id])
   companyContacts     CompanyContact?    @relation("CompanyContacts")
   files               File[]             @relation("CompanyFiles")
   folders             Folder[]
+  manager_companies   manager_companies?
   notes               Note[]
   notifications       Notification[]
   photoshoots         Photoshoot[]
   plans               Plan[]
-  staff               StaffCompany?
 
   @@map("companies")
 }
@@ -70,32 +71,6 @@ model CompanyContact {
 
   @@index([companyId])
   @@map("company_contacts")
-}
-
-model Staff {
-  id        String         @id @default(cuid())
-  createdAt DateTime       @default(now()) @map("created_at")
-  updatedAt DateTime       @updatedAt @map("updated_at")
-  userId    String         @unique @map("user_id")
-  avatarId  String?        @unique @map("avatar_id")
-  avatar    File?          @relation("StaffAvatar", fields: [avatarId], references: [id])
-  user      User           @relation(fields: [userId], references: [id])
-  companies StaffCompany[]
-
-  @@map("staff")
-}
-
-model StaffCompany {
-  staffId   String   @map("staff_id")
-  companyId String   @unique(where: raw("(is_admin = true)")) @map("company_id")
-  createdAt DateTime @default(now()) @map("created_at")
-  isAdmin   Boolean  @default(false) @map("is_admin")
-  company   Company  @relation(fields: [companyId], references: [id])
-  staff     Staff    @relation(fields: [staffId], references: [id])
-
-  @@id([staffId, companyId])
-  @@index([companyId])
-  @@map("staff_companies")
 }
 
 model Note {
@@ -125,7 +100,7 @@ model Notification {
   createdAt DateTime          @default(now()) @map("created_at")
   updatedAt DateTime          @updatedAt @map("updated_at")
   companyId String?           @map("company_id")
-  company   Company?          @relation(fields: [companyId], references: [id])
+  company   Company?          @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([companyId])
   @@index([scope])
@@ -139,7 +114,7 @@ model Plan {
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
   companyId      String    @map("company_id")
-  company        Company   @relation(fields: [companyId], references: [id])
+  company        Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
   posts          Post[]
 
   @@index([companyId])
@@ -160,7 +135,7 @@ model Post {
   planId         String     @map("plan_id")
   comments       Comment[]
   postFiles      PostFile[]
-  plan           Plan       @relation(fields: [planId], references: [id])
+  plan           Plan       @relation(fields: [planId], references: [id], onDelete: Cascade)
 
   @@index([planId])
   @@index([publishingDate])
@@ -177,7 +152,7 @@ model Comment {
   postId    String              @map("post_id")
   seenBy    CommentSeenByUser[]
   author    User                @relation(fields: [authorId], references: [id])
-  post      Post                @relation(fields: [postId], references: [id])
+  post      Post                @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@index([postId])
   @@index([authorId])
@@ -188,7 +163,7 @@ model CommentSeenByUser {
   userId    String   @map("user_id")
   commentId String   @map("comment_id")
   seenAt    DateTime @default(now()) @map("seen_at")
-  comment   Comment  @relation(fields: [commentId], references: [id])
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id])
 
   @@id([userId, commentId])
@@ -197,30 +172,32 @@ model CommentSeenByUser {
 }
 
 model File {
-  id              String           @id @default(cuid())
-  name            String
-  mimeType        String           @map("mime_type")
-  type            FileType
-  status          FileStatus       @default(pending)
-  size            Int
-  width           Int?
-  height          Int?
-  duration        Int?
-  storagePath     String           @map("storage_path")
-  createdAt       DateTime         @default(now()) @map("created_at")
-  updatedAt       DateTime         @updatedAt @map("updated_at")
-  uploaderId      String           @map("uploader_id")
-  companyId       String?          @map("company_id")
-  folderId        String?          @map("folder_id")
-  companyAvatar   Company?         @relation("CompanyAvatar")
-  fileDerivatives FileDerivative[]
-  company         Company?         @relation("CompanyFiles", fields: [companyId], references: [id])
-  folder          Folder?          @relation(fields: [folderId], references: [id])
-  uploader        User             @relation("FileUploader", fields: [uploaderId], references: [id])
-  messageFiles    MessageFile[]
-  noteFiles       NoteFile[]
-  postFiles       PostFile[]
-  staffAvatar     Staff?           @relation("StaffAvatar")
+  id                                          String           @id @default(cuid())
+  name                                        String
+  mimeType                                    String           @map("mime_type")
+  type                                        FileType
+  status                                      FileStatus       @default(pending)
+  size                                        Int
+  width                                       Int?
+  height                                      Int?
+  duration                                    Int?
+  storagePath                                 String           @map("storage_path")
+  createdAt                                   DateTime         @default(now()) @map("created_at")
+  updatedAt                                   DateTime         @updatedAt @map("updated_at")
+  uploaderId                                  String           @map("uploader_id")
+  companyId                                   String?          @map("company_id")
+  folderId                                    String?          @map("folder_id")
+  bookmarks_bookmarks_book_document_idTofiles bookmarks?       @relation("bookmarks_book_document_idTofiles")
+  bookmarks_bookmarks_book_poster_idTofiles   bookmarks?       @relation("bookmarks_book_poster_idTofiles")
+  companyAvatar                               Company?         @relation("CompanyAvatar")
+  fileDerivatives                             FileDerivative[]
+  company                                     Company?         @relation("CompanyFiles", fields: [companyId], references: [id])
+  folder                                      Folder?          @relation(fields: [folderId], references: [id])
+  uploader                                    User             @relation("FileUploader", fields: [uploaderId], references: [id])
+  managers                                    managers?
+  messageFiles                                MessageFile[]
+  noteFiles                                   NoteFile[]
+  postFiles                                   PostFile[]
 
   @@index([companyId])
   @@index([folderId])
@@ -278,7 +255,7 @@ model NoteFile {
   noteId    String   @map("note_id")
   fileId    String   @map("file_id")
   createdAt DateTime @default(now()) @map("created_at")
-  file      File     @relation(fields: [fileId], references: [id])
+  file      File     @relation(fields: [fileId], references: [id], onDelete: Cascade)
   note      Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
 
   @@id([noteId, fileId])
@@ -294,7 +271,7 @@ model Folder {
   updatedAt   DateTime @updatedAt @map("updated_at")
   companyId   String   @map("company_id")
   files       File[]
-  company     Company  @relation(fields: [companyId], references: [id])
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([companyId])
   @@map("folders")
@@ -320,7 +297,7 @@ model Message {
   groupChatId  String                       @map("groupchat_id")
   lastSeenBy   LastSeenMessageInGroupChat[]
   messageFiles MessageFile[]
-  groupChat    GroupChat                    @relation(fields: [groupChatId], references: [id])
+  groupChat    GroupChat                    @relation(fields: [groupChatId], references: [id], onDelete: Cascade)
   sender       User                         @relation(fields: [senderId], references: [id])
 
   @@index([groupChatId])
@@ -334,8 +311,8 @@ model LastSeenMessageInGroupChat {
   groupChatId String    @map("group_chat_id")
   messageId   String    @map("message_id")
   updatedAt   DateTime  @updatedAt @map("updated_at")
-  groupChat   GroupChat @relation(fields: [groupChatId], references: [id])
-  message     Message   @relation(fields: [messageId], references: [id])
+  groupChat   GroupChat @relation(fields: [groupChatId], references: [id], onDelete: Cascade)
+  message     Message   @relation(fields: [messageId], references: [id], onDelete: Cascade)
   user        User      @relation(fields: [userId], references: [id])
 
   @@id([userId, groupChatId])
@@ -352,7 +329,7 @@ model Photoshoot {
   companyId      String             @map("company_id")
   photographerId String?            @map("photographer_id")
   bookings       PhotoshootBooking?
-  company        Company            @relation(fields: [companyId], references: [id])
+  company        Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
   photographer   Photographer?      @relation(fields: [photographerId], references: [id])
 
   @@unique([companyId, date, segment])
@@ -367,7 +344,7 @@ model PhotoshootBooking {
   bookedById   String         @map("booked_by_id")
   photoshootId String         @unique @map("photoshoot_id")
   bookedBy     CompanyContact @relation(fields: [bookedById], references: [id])
-  photoshoot   Photoshoot     @relation(fields: [photoshootId], references: [id])
+  photoshoot   Photoshoot     @relation(fields: [photoshootId], references: [id], onDelete: Cascade)
 
   @@index([bookedById])
   @@map("photoshoot_bookings")
@@ -407,8 +384,48 @@ model BusinessAssociate {
   @@map("business_associates")
 }
 
+model bookmarks {
+  id                                      String   @id
+  name                                    String
+  description                             String?
+  published                               Boolean  @default(false)
+  created_at                              DateTime @default(now())
+  updated_at                              DateTime
+  author_id                               String
+  book_document_id                        String?  @unique
+  book_poster_id                          String?  @unique
+  users                                   User     @relation(fields: [author_id], references: [id])
+  files_bookmarks_book_document_idTofiles File?    @relation("bookmarks_book_document_idTofiles", fields: [book_document_id], references: [id])
+  files_bookmarks_book_poster_idTofiles   File?    @relation("bookmarks_book_poster_idTofiles", fields: [book_poster_id], references: [id])
+}
+
+model manager_companies {
+  manager_id String
+  company_id String   @unique(where: raw("(is_admin = true)"))
+  created_at DateTime @default(now())
+  is_admin   Boolean  @default(false)
+  companies  Company  @relation(fields: [company_id], references: [id])
+  managers   managers @relation(fields: [manager_id], references: [id])
+
+  @@id([manager_id, company_id])
+  @@index([company_id])
+}
+
+model managers {
+  id                String              @id
+  location          String?
+  note              String?
+  created_at        DateTime            @default(now())
+  updated_at        DateTime
+  user_id           String              @unique
+  avatar_id         String?             @unique
+  manager_companies manager_companies[]
+  files             File?               @relation(fields: [avatar_id], references: [id])
+  users             User                @relation(fields: [user_id], references: [id])
+}
+
 enum Role {
-  staff
+  manager
   company_contact
   admin
 }

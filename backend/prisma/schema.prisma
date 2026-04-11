@@ -10,7 +10,7 @@ datasource db {
 model User {
   id                           String                       @id @default(cuid())
   name                         String
-  email                        String?                      @unique
+  email                        String                       @unique
   phone                        String?
   role                         Role
   authUserId                   String                       @unique @map("auth_user_id") @db.Uuid
@@ -148,20 +148,19 @@ model File {
   updatedAt                                   DateTime         @updatedAt @map("updated_at")
   uploaderId                                  String           @map("uploader_id")
   client_id                                   String?
-  folderId                                    String?          @map("folder_id")
   bookmarks_bookmarks_book_document_idTofiles bookmarks?       @relation("bookmarks_book_document_idTofiles")
   bookmarks_bookmarks_book_poster_idTofiles   bookmarks?       @relation("bookmarks_book_poster_idTofiles")
+  client_files                                client_files[]
   clients_clients_avatar_idTofiles            clients?         @relation("clients_avatar_idTofiles")
   fileDerivatives                             FileDerivative[]
   clients_files_client_idToclients            clients?         @relation("files_client_idToclients", fields: [client_id], references: [id])
-  folder                                      Folder?          @relation(fields: [folderId], references: [id])
   uploader                                    User             @relation("FileUploader", fields: [uploaderId], references: [id])
+  folder_files                                folder_files[]
   messageFiles                                MessageFile[]
   noteFiles                                   NoteFile[]
   postFiles                                   PostFile[]
   users_users_avatar_idTofiles                User?            @relation("users_avatar_idTofiles")
 
-  @@index([folderId])
   @@index([uploaderId])
   @@index([type])
   @@index([status])
@@ -226,14 +225,13 @@ model NoteFile {
 }
 
 model Folder {
-  id          String   @id @default(cuid())
-  name        String
-  storagePath String   @map("storage_path")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  client_id   String
-  files       File[]
-  clients     clients  @relation(fields: [client_id], references: [id], onDelete: Cascade)
+  id           String         @id @default(cuid())
+  name         String
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+  client_id    String
+  folder_files folder_files[]
+  clients      clients        @relation(fields: [client_id], references: [id], onDelete: Cascade)
 
   @@index([client_id])
   @@map("folders")
@@ -408,6 +406,7 @@ model clients {
   business_associate_id          String?
   photographer_id                String?
   client_contacts                client_contacts?
+  client_files                   client_files[]
   files_clients_avatar_idTofiles File?              @relation("clients_avatar_idTofiles", fields: [avatar_id], references: [id])
   business_associates            BusinessAssociate? @relation(fields: [business_associate_id], references: [id])
   chats                          chats              @relation(fields: [chat_id], references: [id], onDelete: Cascade)
@@ -443,6 +442,28 @@ model managers {
   user_id         String            @unique
   manager_clients manager_clients[]
   users           User              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model client_files {
+  client_id  String
+  file_id    String
+  created_at DateTime @default(now())
+  clients    clients  @relation(fields: [client_id], references: [id], onDelete: Cascade)
+  files      File     @relation(fields: [file_id], references: [id], onDelete: Cascade)
+
+  @@id([client_id, file_id])
+  @@index([client_id])
+}
+
+model folder_files {
+  folder_id  String
+  file_id    String
+  created_at DateTime @default(now())
+  files      File     @relation(fields: [file_id], references: [id], onDelete: Cascade)
+  folders    Folder   @relation(fields: [folder_id], references: [id], onDelete: Cascade)
+
+  @@id([folder_id, file_id])
+  @@index([folder_id])
 }
 
 enum Role {
